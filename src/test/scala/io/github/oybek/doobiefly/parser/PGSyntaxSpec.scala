@@ -1,28 +1,50 @@
 package io.github.oybek.doobiefly.parser
 
+import atto.Atto._
 import atto._
-import Atto._
-import atto.ParseResult._
 import io.github.oybek.doobiefly.parser.postgres.PG
-import io.github.oybek.doobiefly.parser.postgres.Syntax.{PG_CreateTable, PG_SQLExpr}
+import io.github.oybek.doobiefly.parser.postgres.Syntax._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 class PGSyntaxSpec extends AnyFlatSpec with Matchers {
 
-  "creating empty table" should "be parsed" in {
+  "creating table" should "be parsed" in {
     val tests =
       Table(
         ("Raw text", "Parse result"),
-        ("CREATE TABLE foo()", Some(PG_CreateTable("foo"))),
-        ("CREATE TABLE foo)", None),
-        (" CREATE  TABLE  Hello_1        (    ) ", Some(PG_CreateTable("Hello_1"))),
-        (" CREATE  TABLE  _Hello_1        (    ) ", None),
+        ("CREATE TABLE foo()", Right(PG_CreateTable("foo"))),
+        ("CREATE TABLE foo)", Left("")),
+        (
+          " CREATE  TABLE  Hello_1        (    ) ",
+          Right(PG_CreateTable("Hello_1"))
+        ),
+        (" CREATE  TABLE  _Hello_1        (    ) ", Left("")),
+        (
+          "CREATE TABLE Student(name character varying (40), age integer, cash real)",
+          Right(
+            PG_CreateTable(
+              name = "Student",
+              columns = List(
+                Column("name", PGVarchar(Some(40))),
+                Column("age", PGInteger),
+                Column("cash", PGReal),
+              )
+            )
+          )
+        ),
+        ("CREATE TABLE Student(name string, age integer)", Left("")),
+        (
+          "create table foobar(i bigint)",
+          Right(PG_CreateTable("foobar", List(Column("i", PGBigInt))))
+        )
       )
     forAll(tests) {
-      case (s: String, r: Option[PG_SQLExpr]) =>
-        PG.parser.parseOnly(s).option should be (r)
+      case (s: String, Right(r)) =>
+        PG.parser.parseOnly(s).either should be(Right(r))
+      case (s: String, Left(_)) =>
+        PG.parser.parseOnly(s).either.isLeft should be(true)
     }
   }
 }
