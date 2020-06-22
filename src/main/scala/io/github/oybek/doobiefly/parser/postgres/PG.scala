@@ -9,18 +9,18 @@ import io.github.oybek.doobiefly.parser.postgres.Syntax.{PG_CreateTable, PG_SQLE
 
 object PG extends SQLParserProvider {
 
+  private lazy val identifier = (
+    letter ~ many(letter | char('_') | digit)
+  ).map { case (x, xs) => x + xs.mkString }
+
   val parser: Parser[PG_SQLExpr] =
     for {
-      _ <- many(whitespace)
-      _ <- stringCI("create")
-      _ <- many1(whitespace)
-      _ <- stringCI("table")
-      _ <- many1(whitespace)
-      (x, xs) <- letter ~ many(letter | char('_') | digit)
-      _ <- many(whitespace)
-      _ <- char('(')
+      _ <- many(whitespace) ~> stringCI("create")
+      _ <- many1(whitespace) ~> stringCI("table")
+      name <- many1(whitespace) ~> identifier
+      _ <- many(whitespace) ~> char('(')
       _ <- many(whitespace)
       _ <- char(')')
       _ <- many(whitespace)
-    } yield PG_CreateTable(x + xs.mkString)
+    } yield PG_CreateTable(name)
 }
