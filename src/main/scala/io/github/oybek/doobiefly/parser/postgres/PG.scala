@@ -9,6 +9,8 @@ import io.github.oybek.doobiefly.parser.postgres.Syntax._
 
 object PG extends SQLParserProvider {
 
+  lazy val `(` = char('(')
+  lazy val `)` = char(')')
   lazy val ws = many(whitespace)
   lazy val ws1 = many1(whitespace)
   def sci(s: String) = stringCI(s)
@@ -25,7 +27,7 @@ object PG extends SQLParserProvider {
 
   def varType[T](ps: Parser[String]) =
     ps ~> opt(
-      ws ~> (char('(') ~> ws ~> many(digit) <~ ws <~ char(')'))
+      ws ~> (`(` ~> ws ~> many(digit) <~ ws <~ `)`)
         .map(_.mkString.toInt)
     )
 
@@ -37,9 +39,16 @@ object PG extends SQLParserProvider {
       (sci("real") | sci("float4")).map(_ => PGReal) |
       (sci("numeric") | sci("decimal")).map(_ => PGDecimal) |
       varType(sci("bit")).map(PGBit) |
-      varType(sci("varchar") | (sci("character") ~> ws1 ~> sci("varying")))
+      varType(sci("varchar") | sci("character") ~> ws1 ~> sci("varying"))
         .map(PGVarchar) |
       varType(sci("varbit") | sci("bit") ~> ws1 ~> sci("varying")).map(PGVarbit)
+  }
+
+  lazy val tableContraint = {
+    (sci("primary") ~> ws1 ~> sci("key") ~> ws ~> `(` ~> ws ~> sepBy1(
+      ws ~> identifier <~ ws,
+      char(',')
+    ) <~ ws <~ `)`).map(PrimaryKey)
   }
 
   val parser: Parser[PG_SQLExpr] =
@@ -47,9 +56,10 @@ object PG extends SQLParserProvider {
       _ <- ws ~> sci("create")
       _ <- ws1 ~> sci("table")
       name <- ws1 ~> identifier
-      _ <- ws ~> char('(')
+      _ <- ws ~> `(`
       columns <- sepBy(ws ~> column <~ ws, char(','))
-      _ <- ws ~> char(')')
+      constraints <- many(ws ~> char(',') ~> ws ~> tableContraint <~ ws)
+      _ <- ws ~> `)`
       _ <- ws
-    } yield PG_CreateTable(name, columns)
+    } yield PG_CreateTable(name, columns, constraints)
 }

@@ -2,6 +2,7 @@ package io.github.oybek.doobiefly.parser
 
 import atto.Atto._
 import atto._
+import cats.data.NonEmptyList
 import io.github.oybek.doobiefly.parser.postgres.PG
 import io.github.oybek.doobiefly.parser.postgres.Syntax._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -61,7 +62,26 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
                 List(Column("author", PGVarchar(None), nullable = false))
             )
           )
-        )
+        ),
+        (
+          """
+            |create table User (
+            | age integer not null,
+            | name varchar not null,
+            | primary key (name, age)
+            |)",
+            |""".stripMargin,
+          Right(
+            PG_CreateTable(
+              name = "User",
+              columns = List(
+                Column("age", PGInteger, nullable = false),
+                Column("name", PGVarchar(None), nullable = false)
+              ),
+              constraints = List(PrimaryKey(NonEmptyList.of("name", "age")))
+            )
+          )
+        ),
       )
     forAll(tests) {
       case (s: String, Right(r)) =>
