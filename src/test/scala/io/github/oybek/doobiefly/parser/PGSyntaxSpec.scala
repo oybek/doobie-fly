@@ -10,6 +10,13 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 
 class PGSyntaxSpec extends AnyFlatSpec with Matchers {
 
+  "column" should "be parsed" in {
+    val column = "author varchar not null"
+    PG.column
+      .parse(column)
+      .option should be(Some(Column("author", PGVarchar(None), false)))
+  }
+
   "creating table" should "be parsed" in {
     val tests =
       Table(
@@ -22,7 +29,13 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
         ),
         (" CREATE  TABLE  _Hello_1        (    ) ", Left("")),
         (
-          "CREATE TABLE Student(name character varying (40), age integer, cash real)",
+          """
+            |CREATE TABLE Student(
+            |  name character varying (40),
+            |  age integer,
+            |  cash real
+            |)
+            |""".stripMargin,
           Right(
             PG_CreateTable(
               name = "Student",
@@ -38,6 +51,16 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
         (
           "create table foobar(i bigint)",
           Right(PG_CreateTable("foobar", List(Column("i", PGBigInt))))
+        ),
+        (
+          "create table Book(author varchar not null)",
+          Right(
+            PG_CreateTable(
+              name = "Book",
+              columns =
+                List(Column("author", PGVarchar(None), nullable = false))
+            )
+          )
         )
       )
     forAll(tests) {

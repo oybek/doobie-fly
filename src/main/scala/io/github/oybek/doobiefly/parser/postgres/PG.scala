@@ -20,11 +20,12 @@ object PG extends SQLParserProvider {
   lazy val column = for {
     name <- identifier
     ttype <- ws1 ~> ttype
-  } yield Column(name, ttype)
+    nullable <- opt(ws1 ~> sci("not") ~> ws1 ~> sci("null")).map(_.isEmpty)
+  } yield Column(name, ttype, nullable)
 
   def varType[T](ps: Parser[String]) =
-    ps ~> ws ~> opt(
-      (char('(') ~> ws ~> many(digit) <~ ws <~ char(')'))
+    ps ~> opt(
+      ws ~> (char('(') ~> ws ~> many(digit) <~ ws <~ char(')'))
         .map(_.mkString.toInt)
     )
 
@@ -36,7 +37,7 @@ object PG extends SQLParserProvider {
       (sci("real") | sci("float4")).map(_ => PGReal) |
       (sci("numeric") | sci("decimal")).map(_ => PGDecimal) |
       varType(sci("bit")).map(PGBit) |
-      varType(sci("varchar") | sci("character") ~> ws1 ~> sci("varying"))
+      varType(sci("varchar") | (sci("character") ~> ws1 ~> sci("varying")))
         .map(PGVarchar) |
       varType(sci("varbit") | sci("bit") ~> ws1 ~> sci("varying")).map(PGVarbit)
   }
@@ -47,9 +48,8 @@ object PG extends SQLParserProvider {
       _ <- ws1 ~> sci("table")
       name <- ws1 ~> identifier
       _ <- ws ~> char('(')
-      column1 <- opt(ws ~> column)
-      columns <- many(ws ~> char(',') ~> ws ~> column)
+      columns <- sepBy(ws ~> column <~ ws, char(','))
       _ <- ws ~> char(')')
       _ <- ws
-    } yield PG_CreateTable(name, column1.fold(List.empty[Column])(_ +: columns))
+    } yield PG_CreateTable(name, columns)
 }
