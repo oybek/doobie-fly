@@ -3,8 +3,8 @@ package io.github.oybek.doobiefly.parser
 import atto.Atto._
 import atto._
 import cats.data.NonEmptyList
-import io.github.oybek.doobiefly.parser.postgres.PG
-import io.github.oybek.doobiefly.parser.postgres.Syntax._
+import io.github.oybek.doobiefly.parser.postgres.PGParsers
+import io.github.oybek.doobiefly.parser.postgres.PGSyntax._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks._
@@ -13,20 +13,19 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
 
   "column" should "be parsed" in {
     val column = "author varchar not null"
-    PG.column
-      .parse(column)
-      .option should be(Some(Column("author", PGVarchar(None), false)))
+    val result = PGParsers.column.parseOnly(column)
+    result.either should be(Right(Column("author", PGVarchar(None), List(ColumnNotNull))))
   }
 
   "creating table" should "be parsed" in {
     val tests =
       Table(
         ("Raw text", "Parse result"),
-        ("CREATE TABLE foo()", Right(PG_CreateTable("foo"))),
+        ("CREATE TABLE foo()", Right(PGCreateTable("foo"))),
         ("CREATE TABLE foo)", Left("")),
         (
           " CREATE  TABLE  Hello_1        (    ) ",
-          Right(PG_CreateTable("Hello_1"))
+          Right(PGCreateTable("Hello_1"))
         ),
         (" CREATE  TABLE  _Hello_1        (    ) ", Left("")),
         (
@@ -38,12 +37,12 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
             |)
             |""".stripMargin,
           Right(
-            PG_CreateTable(
+            PGCreateTable(
               name = "Student",
               columns = List(
-                Column("name", PGVarchar(Some(40))),
-                Column("age", PGInteger),
-                Column("cash", PGReal),
+                Column("name", PGVarchar(Some(40)), List()),
+                Column("age", PGInteger, List()),
+                Column("cash", PGReal, List()),
               )
             )
           )
@@ -51,15 +50,15 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
         ("CREATE TABLE Student(name string, age integer)", Left("")),
         (
           "create table foobar(i bigint)",
-          Right(PG_CreateTable("foobar", List(Column("i", PGBigInt))))
+          Right(PGCreateTable("foobar", List(Column("i", PGBigInt, List()))))
         ),
         (
           "create table Book(author varchar not null)",
           Right(
-            PG_CreateTable(
+            PGCreateTable(
               name = "Book",
               columns =
-                List(Column("author", PGVarchar(None), nullable = false))
+                List(Column("author", PGVarchar(None), List(ColumnNotNull)))
             )
           )
         ),
@@ -72,22 +71,41 @@ class PGSyntaxSpec extends AnyFlatSpec with Matchers {
             |)",
             |""".stripMargin,
           Right(
-            PG_CreateTable(
+            PGCreateTable(
               name = "User",
               columns = List(
-                Column("age", PGInteger, nullable = false),
-                Column("name", PGVarchar(None), nullable = false)
+                Column("age", PGInteger, List(ColumnNotNull)),
+                Column("name", PGVarchar(None), List(ColumnNotNull))
               ),
               constraints = List(PrimaryKey(NonEmptyList.of("name", "age")))
+            )
+          )
+        ),
+        (
+          """
+            |create table User (
+            | id integer primary key,
+            | age integer not null,
+            | name varchar not null
+            |)",
+            |""".stripMargin,
+          Right(
+            PGCreateTable(
+              name = "User",
+              columns = List(
+                Column("id", PGInteger, List(ColumnPrimaryKey)),
+                Column("age", PGInteger, List(ColumnNotNull)),
+                Column("name", PGVarchar(None), List(ColumnNotNull))
+              )
             )
           )
         ),
       )
     forAll(tests) {
       case (s: String, Right(r)) =>
-        PG.parser.parseOnly(s).either should be(Right(r))
+        PGParsers.parser.parseOnly(s).either should be(Right(r))
       case (s: String, Left(_)) =>
-        PG.parser.parseOnly(s).either.isLeft should be(true)
+        PGParsers.parser.parseOnly(s).either.isLeft should be(true)
     }
   }
 }

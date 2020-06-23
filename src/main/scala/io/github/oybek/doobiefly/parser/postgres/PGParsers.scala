@@ -4,26 +4,24 @@ import atto._
 import Atto._
 import cats.implicits._
 import atto.Atto.{char, letter, many, many1, whitespace}
-import io.github.oybek.doobiefly.parser.{SQLExpr, SQLParserProvider}
-import io.github.oybek.doobiefly.parser.postgres.Syntax._
+import io.github.oybek.doobiefly.parser.{CommonParsers, SQLExpr, SQLParser}
+import io.github.oybek.doobiefly.parser.postgres.PGSyntax._
 
-object PG extends SQLParserProvider {
-
-  lazy val `(` = char('(')
-  lazy val `)` = char(')')
-  lazy val ws = many(whitespace)
-  lazy val ws1 = many1(whitespace)
-  def sci(s: String) = stringCI(s)
+object PGParsers extends SQLParser with PGBasicParsers {
 
   lazy val identifier = (
-    letter ~ many(letter | char('_') | digit)
+    letter ~ many(letter | `_` | digit)
   ).map { case (x, xs) => x + xs.mkString }
 
+  lazy val columnConstraint =
+    `null`.map(_ => ColumnNull) |
+    `not null`.map(_ => ColumnNotNull) |
+    `primary key`.map(_ => ColumnPrimaryKey)
+
   lazy val column = for {
-    name <- identifier
-    ttype <- ws1 ~> ttype
-    nullable <- opt(ws1 ~> sci("not") ~> ws1 ~> sci("null")).map(_.isEmpty)
-  } yield Column(name, ttype, nullable)
+    (name, ttype) <- identifier ~ (ws1 ~> ttype)
+    columnCs <- many(ws1 ~> columnConstraint)
+  } yield Column(name, ttype, columnCs)
 
   def varType[T](ps: Parser[String]) =
     ps ~> opt(
@@ -44,22 +42,18 @@ object PG extends SQLParserProvider {
       varType(sci("varbit") | sci("bit") ~> ws1 ~> sci("varying")).map(PGVarbit)
   }
 
-  lazy val tableContraint = {
-    (sci("primary") ~> ws1 ~> sci("key") ~> ws ~> `(` ~> ws ~> sepBy1(
-      ws ~> identifier <~ ws,
-      char(',')
-    ) <~ ws <~ `)`).map(PrimaryKey)
-  }
+  lazy val tableConstraint =
+    (`primary key` ~> ws ~> `(` ~> ws ~> sepBy1(ws ~> identifier <~ ws, `,`) <~ ws <~ `)`).map(PrimaryKey)
 
-  val parser: Parser[PG_SQLExpr] =
+  val parser: Parser[PGSQLExpr] =
     for {
-      _ <- ws ~> sci("create")
-      _ <- ws1 ~> sci("table")
+      _ <- ws ~> `create`
+      _ <- ws1 ~> `table`
       name <- ws1 ~> identifier
       _ <- ws ~> `(`
-      columns <- sepBy(ws ~> column <~ ws, char(','))
-      constraints <- many(ws ~> char(',') ~> ws ~> tableContraint <~ ws)
+      columns <- sepBy(ws ~> column <~ ws, `,`)
+      constraints <- many(ws ~> `,` ~> ws ~> tableConstraint <~ ws)
       _ <- ws ~> `)`
       _ <- ws
-    } yield PG_CreateTable(name, columns, constraints)
+    } yield PGCreateTable(name, columns, constraints)
 }
