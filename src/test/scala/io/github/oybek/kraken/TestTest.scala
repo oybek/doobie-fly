@@ -1,4 +1,4 @@
-package io.github.oybek.doobiefly
+package io.github.oybek.kraken
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
