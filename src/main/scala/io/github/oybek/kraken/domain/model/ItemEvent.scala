@@ -1,6 +1,4 @@
-package io.github.oybek.kraken.domain
-
-import io.github.oybek.kraken.avito.Item
+package io.github.oybek.kraken.domain.model
 
 sealed trait ItemEvent
 case class ItemCreated(item: Item) extends ItemEvent

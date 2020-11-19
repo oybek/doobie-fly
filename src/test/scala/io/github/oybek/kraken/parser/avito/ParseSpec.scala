@@ -1,5 +1,6 @@
-package io.github.oybek.kraken.avito
+package io.github.oybek.kraken.parser.avito
 
+import io.github.oybek.kraken.domain.model.Item
 import io.github.oybek.kraken.parser.syntax.DocumentOps
 import org.jsoup.nodes.Document
 import org.scalatest.flatspec.AnyFlatSpec

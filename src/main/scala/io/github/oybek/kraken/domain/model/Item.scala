@@ -1,4 +1,4 @@
-package io.github.oybek.kraken.avito
+package io.github.oybek.kraken.domain.model
 
 import java.time.LocalDateTime
 

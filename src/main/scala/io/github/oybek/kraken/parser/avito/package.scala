@@ -1,9 +1,9 @@
-package io.github.oybek.kraken
+package io.github.oybek.kraken.parser
 
 import java.time.LocalDateTime
 
 import cats.implicits.catsSyntaxEitherId
-import io.github.oybek.kraken.parser.Parser
+import io.github.oybek.kraken.domain.model.Item
 import org.jsoup.nodes.{Document, Element}
 
 package object avito {
