@@ -2,17 +2,18 @@ package io.github.oybek.kraken.avito
 
 import java.time.LocalDateTime
 
+import cats.implicits.catsSyntaxEitherId
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class RamItemParseSpec extends ParseSpec {
 
-  val item: Item = Item(
+  val item: Either[String, Item] = Item(
     link = "https://avito.ru/ekaterinburg/tovary_dlya_kompyutera/operativnaya_pamyat_8gb_x2_16gb_ddr4_2017375313",
     name = "Оперативная память 8gb x2 16gb ddr4",
     time = LocalDateTime.parse("2020-11-18T10:10:00"),
     cost = 5000
-  )
+  ).asRight[String]
 
   val itemDocument: Document = Jsoup.parse(
     """
@@ -41,9 +42,12 @@ class RamItemParseSpec extends ParseSpec {
       |      <div class="item_table-wrapper">
       |         <div class="description item_table-description">
       |            <div class="snippet-title-row">
-      |               <h3 class="snippet-title" data-shape="default"><a class="snippet-link" itemprop="url" data-marker="item-title" href="/ekaterinburg/tovary_dlya_kompyutera/operativnaya_pamyat_8gb_x2_16gb_ddr4_2017375313" target="_blank" title="Оперативная память 8gb x2 16gb ddr4 в Екатеринбурге"><span itemprop="name" class="snippet-link-name">
+      |               <h3 class="snippet-title" data-shape="default">
+      |               <a class="snippet-link" itemprop="url" data-marker="item-title" href="/ekaterinburg/tovary_dlya_kompyutera/operativnaya_pamyat_8gb_x2_16gb_ddr4_2017375313" target="_blank" title="Оперативная память 8gb x2 16gb ddr4 в Екатеринбурге">
+      |                 <span itemprop="name" class="snippet-link-name">
       |                  Оперативная память 8gb x2 16gb ddr4
-      |                  </span></a>
+      |                 </span>
+      |               </a>
       |               </h3>
       |            </div>
       |            <div class="snippet-price-row">
