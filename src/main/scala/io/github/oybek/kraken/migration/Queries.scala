@@ -1,9 +1,10 @@
-package io.github.oybek.kraken.db.migration
+package io.github.oybek.kraken.migration
 
 import doobie.implicits._
 import doobie.util.query.Query0
 import doobie.util.update.Update0
-import io.github.oybek.kraken.db.migration.model.Commit
+import io.github.oybek.kraken.migration.model.Commit
+import io.github.oybek.kraken.migration.model.Commit
 
 object Queries {
   val createCommitTable: Update0 =

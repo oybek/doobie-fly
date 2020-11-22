@@ -1,11 +1,11 @@
-package io.github.oybek.kraken.db.migration.model
+package io.github.oybek.kraken.migration.model
 
 import java.math.BigInteger
 
 import cats.data.NonEmptyList
 import cats.implicits._
 import doobie.Fragment
-import io.github.oybek.kraken.db.migration.showFragment
+import io.github.oybek.kraken.migration.showFragment
 
 final case class Migration(label: String, fr: Fragment, frs: Fragment*) {
   lazy val md5Hash: String = {

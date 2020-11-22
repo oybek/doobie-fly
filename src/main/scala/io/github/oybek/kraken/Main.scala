@@ -15,8 +15,8 @@ import cats.effect.{
 import doobie.ExecutionContexts
 import doobie.hikari.HikariTransactor
 import io.github.oybek.kraken.config.{Config, DbConfig}
-import io.github.oybek.kraken.db.migration.migrate
-import io.github.oybek.kraken.http.TgGate
+import io.github.oybek.kraken.migration.migrate
+import io.github.oybek.kraken.hub.TgGate
 import org.http4s.client.Client
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger

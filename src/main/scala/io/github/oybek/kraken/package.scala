@@ -1,7 +1,7 @@
 package io.github.oybek
 
 import doobie.implicits.toSqlInterpolator
-import io.github.oybek.kraken.db.migration.model.Migration
+import io.github.oybek.kraken.migration.model.Migration
 
 package object kraken {
 
