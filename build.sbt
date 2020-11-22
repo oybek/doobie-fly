@@ -1,15 +1,8 @@
 
-name := "kraken"
+ThisBuild / version := "0.1"
+ThisBuild / organization := "io.github.oybek"
 
-version := "0.1"
-
-scalaVersion := "2.13.2"
-
-addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
-
-libraryDependencies ++= Seq(
-  "org.jsoup" % "jsoup" % "1.13.1",
-  "org.typelevel" %% "cats-core" % "2.1.1",
-
-  "org.scalatest" %% "scalatest" % "3.2.0" % Test
-)
+lazy val kraken = (project in file("."))
+  .settings(name := "kraken")
+  .settings(libraryDependencies ++= Dependencies.common)
+  .settings(Compiler.settings)
