@@ -1,4 +1,4 @@
-package io.github.oybek.kraken.hub
+package io.github.oybek.kraken.hub.telegram
 
 import telegramium.bots.{Location, Message}
 

@@ -2,21 +2,12 @@ package io.github.oybek.kraken
 
 import java.util.concurrent.TimeUnit
 
-import cats.effect.{
-  Async,
-  Blocker,
-  ContextShift,
-  ExitCode,
-  IO,
-  IOApp,
-  Resource,
-  Sync
-}
+import cats.effect._
 import doobie.ExecutionContexts
 import doobie.hikari.HikariTransactor
 import io.github.oybek.kraken.config.{Config, DbConfig}
+import io.github.oybek.kraken.hub.telegram.TgGate
 import io.github.oybek.kraken.migration.migrate
-import io.github.oybek.kraken.hub.TgGate
 import org.http4s.client.Client
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger

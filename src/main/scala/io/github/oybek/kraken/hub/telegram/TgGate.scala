@@ -1,11 +1,11 @@
-package io.github.oybek.kraken.hub
+package io.github.oybek.kraken.hub.telegram
 
-import cats.implicits._
 import cats.effect.{Async, Concurrent, Sync, Timer}
+import cats.implicits._
 import org.slf4j.{Logger, LoggerFactory}
-import telegramium.bots.{ChatIntId, Message}
-import telegramium.bots.high.{Api, LongPollBot, Methods}
 import telegramium.bots.high.implicits._
+import telegramium.bots.high.{Api, LongPollBot, Methods}
+import telegramium.bots.{ChatIntId, Message}
 
 class TgGate[F[_]: Async: Timer: Concurrent]()(implicit bot: Api[F])
     extends LongPollBot[F](bot)
