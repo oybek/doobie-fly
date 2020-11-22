@@ -3,7 +3,7 @@ package io.github.oybek.kraken.domain
 import java.time.LocalDateTime
 
 import io.github.oybek.kraken.domain.logic.diff
-import io.github.oybek.kraken.domain.model.{Item, ItemChanged, ItemCreated}
+import io.github.oybek.kraken.domain.model.{Item, ItemChanged, ItemCreated, ItemDeleted}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -28,7 +28,7 @@ class DiffSpec extends AnyFlatSpec with Matchers {
     )
     val items2 = items.tail
 
-    diff(items, items2) should be (List(ItemCreated(
+    diff(items, items2) should be (List(ItemDeleted(
       items.head
     )))
   }
@@ -40,10 +40,10 @@ class DiffSpec extends AnyFlatSpec with Matchers {
     )
     val items2 = items.map(x => x.copy(cost = x.cost * 2))
 
-    diff(items, items2) should be (
+    diff(items, items2).toSet should be (
       items.zip(items2).map {
         case (x, y) => ItemChanged(x, y)
-      }
+      }.toSet
     )
   }
 }
