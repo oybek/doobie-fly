@@ -2,8 +2,8 @@ package io.github.oybek.kraken.domain
 
 import java.time.LocalDateTime
 
-import io.github.oybek.kraken.domain.logic.diff
-import io.github.oybek.kraken.domain.model.{Item, ItemChanged, ItemCreated, ItemDeleted}
+import io.github.oybek.kraken.domain.diff
+import io.github.oybek.kraken.domain.model._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -14,11 +14,9 @@ class DiffSpec extends AnyFlatSpec with Matchers {
       Item("google.com", "cpu", LocalDateTime.now(), 100),
       Item("google.ru", "cpu", LocalDateTime.now(), 100)
     )
-    val items2 = Item("google.com/123", "new cpu", LocalDateTime.now(), 100)::items
+    val items2 = Item("google.com/123", "new cpu", LocalDateTime.now(), 100) :: items
 
-    diff(items, items2) should be (List(ItemCreated(
-      items2.head
-    )))
+    diff(items, items2) should be(List(ItemCreated(items2.head)))
   }
 
   "when item deleted diff" must "return it" in {
@@ -28,9 +26,7 @@ class DiffSpec extends AnyFlatSpec with Matchers {
     )
     val items2 = items.tail
 
-    diff(items, items2) should be (List(ItemDeleted(
-      items.head
-    )))
+    diff(items, items2) should be(List(ItemDeleted(items.head)))
   }
 
   "when item updated diff" must "return it" in {
@@ -40,10 +36,13 @@ class DiffSpec extends AnyFlatSpec with Matchers {
     )
     val items2 = items.map(x => x.copy(cost = x.cost * 2))
 
-    diff(items, items2).toSet should be (
-      items.zip(items2).map {
-        case (x, y) => ItemChanged(x, y)
-      }.toSet
+    diff(items, items2).toSet should be(
+      items
+        .zip(items2)
+        .map {
+          case (x, y) => ItemChanged(x, y)
+        }
+        .toSet
     )
   }
 }
