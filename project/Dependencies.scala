@@ -13,6 +13,8 @@ object Dependencies {
     val mockTest = "3.1.0"
     val jsoup = "1.13.1"
     val pureConfig = "0.13.0"
+    val http4s = "0.21.7"
+    val telegramium = "2.49.0"
   }
 
   val catsCore = "org.typelevel" %% "cats-core" % V.catsCore
@@ -46,9 +48,22 @@ object Dependencies {
     "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.37.0" % "test"
   )
 
+  val telegramium = Seq(
+    "io.github.apimorphism" %% "telegramium-core" % V.telegramium,
+    "io.github.apimorphism" %% "telegramium-high" % V.telegramium
+  )
+
+  val http4s = Seq(
+    "org.http4s" %% "http4s-dsl" % V.http4s,
+    "org.http4s" %% "http4s-circe" % V.http4s,
+    "org.http4s" %% "http4s-blaze-client" % V.http4s
+  )
+
   val common = Seq(catsCore, catsEffect, scalaTest, jsoup, pureConfig) ++
     logger ++
     doobie ++
     mock ++
+    http4s ++
+    telegramium ++
     testContainers
 }
