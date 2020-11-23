@@ -2,38 +2,56 @@ package io.github.oybek.kraken.parser
 
 import java.time.LocalDateTime
 
-import cats.implicits.catsSyntaxEitherId
+import cats.implicits.{catsStdInstancesForEither, catsSyntaxEitherId, toTraverseOps}
+import cats.instances.list._
 import io.github.oybek.kraken.domain.model.Item
-import org.jsoup.nodes.{Document, Element}
+import org.jsoup.nodes.Element
+
+import scala.jdk.CollectionConverters._
 
 package object avito {
 
-  implicit val itemParser: Parser[Item] = (document: Document) =>
-    for {
-      aWithLink <- document.findFirst("a[data-marker$=item-title]")
-      titleSpan <- aWithLink.findFirst("span")
-      divWithDate <- document.findFirst("div[data-marker$=item-date]")
-      dateSource = List(divWithDate.attr("data-tooltip"), divWithDate.text())
-      dateRegex = (s"""(\\d+) (${monthsToNum.keys.mkString("|")}) (\\d+):(\\d+)""").r
-      time <- dateSource.collectFirst {
-        case dateRegex(dayOfMonth, month, hh, mm) =>
-          LocalDateTime
-            .now()
-            .withDayOfMonth(dayOfMonth.toInt)
-            .withMonth(monthsToNum.getOrElse(month, 1))
-            .withHour(hh.toInt)
-            .withMinute(mm.toInt)
-            .withSecond(0)
-            .withNano(0)
-      }.fold(s"Can't parse date from $dateSource".asLeft[LocalDateTime])(_.asRight[String])
-      spanWithPrice <- document.findFirst("span[data-marker$=item-price]")
-      price <- spanWithPrice.findFirst("meta[itemprop$=price]").map(_.attr("content").toInt)
-    } yield Item(
-      link = "https://avito.ru" + aWithLink.attr("href"),
-      name = titleSpan.text(),
-      time = time,
-      cost = price
-    )
+  implicit val itemParser: Parser[List[Item]] = {
+    case AvitoItem(document) =>
+      for {
+        aWithLink <- document.findFirst("a[data-marker$=item-title]")
+        titleSpan <- aWithLink.findFirst("span")
+        divWithDate <- document.findFirst("div[data-marker$=item-date]")
+        dateSource = List(divWithDate.attr("data-tooltip"), divWithDate.text())
+        dateRegex = (s"""(\\d+) (${monthsToNum.keys.mkString("|")}) (\\d+):(\\d+)""").r
+        time <- dateSource.collectFirst {
+          case dateRegex(dayOfMonth, month, hh, mm) =>
+            LocalDateTime
+              .now()
+              .withMonth(monthsToNum.getOrElse(month, 1))
+              .withDayOfMonth(dayOfMonth.toInt)
+              .withHour(hh.toInt)
+              .withMinute(mm.toInt)
+              .withSecond(0)
+              .withNano(0)
+        }.fold(s"Can't parse date from $dateSource".asLeft[LocalDateTime])(_.asRight[String])
+        spanWithPrice <- document.findFirst("span[data-marker$=item-price]")
+        price <- spanWithPrice.findFirst("meta[itemprop$=price]").map(_.attr("content").toInt)
+      } yield List(Item(
+        link = "https://avito.ru" + aWithLink.attr("href"),
+        name = titleSpan.text(),
+        time = time,
+        cost = price
+      ))
+    case AvitoItemList(document) =>
+      for {
+        rawItems <- document.select("div[data-marker$=item]")
+          .asScala
+          .toList
+          .asRight[String]
+        res <- rawItems.map(AvitoItem).flatTraverse(itemParser.parse)
+      } yield res
+    case AvitoPage(document) =>
+      for {
+        itemList <- document.findFirst("div[data-marker$=catalog-serp]")
+        res <- itemParser.parse(AvitoItemList(itemList))
+      } yield res
+  }
 
   private val monthsToNum = Map(
     "январь" -> 1, "января" -> 1,

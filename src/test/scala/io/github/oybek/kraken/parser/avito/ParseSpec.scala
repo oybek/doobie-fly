@@ -9,9 +9,9 @@ import org.scalatest.matchers.should.Matchers
 trait ParseSpec extends AnyFlatSpec with Matchers {
 
   def itemDocument: Document
-  def item: Either[String, Item]
+  def items: Either[String, List[Item]]
 
   "Raw html item" must "be parsed" in {
-    itemDocument.as[Item] should be(item)
+    AvitoItem(itemDocument).as[List[Item]] should be(items)
   }
 }

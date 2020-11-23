@@ -1,7 +1,7 @@
 package io.github.oybek.kraken.parser
 
-import org.jsoup.nodes.Document
+import io.github.oybek.kraken.parser.avito.AvitoElement
 
 trait Parser[T] {
-  def parse(document: Document): Either[String, T]
+  def parse(document: AvitoElement): Either[String, T]
 }

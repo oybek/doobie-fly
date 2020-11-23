@@ -9,12 +9,12 @@ import org.jsoup.nodes.Document
 
 class MotherboardItemParseSpec extends ParseSpec {
 
-  val item: Either[String, Item] = Item(
+  val items: Either[String, List[Item]] = List(Item(
     link = "https://avito.ru/ekaterinburg/tovary_dlya_kompyutera/materinskaya_plata_gigabyte_b450_aorus_m_1972334828",
     name = "Материнская плата gigabyte B450 aorus M",
     time = LocalDateTime.parse("2020-10-21T19:34:00"),
     cost = 5500
-  ).asRight[String]
+  )).asRight[String]
 
   val itemDocument: Document = Jsoup.parse(
     """

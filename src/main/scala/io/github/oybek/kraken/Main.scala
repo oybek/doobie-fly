@@ -11,6 +11,7 @@ import io.github.oybek.kraken.migration.migrate
 import org.http4s.client.Client
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger
+import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 import telegramium.bots.high.{Api, BotApi, LongPollBot}
 
@@ -22,6 +23,16 @@ object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] =
     for {
+      _ <- IO {
+        val userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.122 Safari/534.30"
+        val html =
+          Jsoup
+            .connect("https://www.avito.ru/ekaterinburg/tovary_dlya_kompyutera/komplektuyuschie/videokarty-ASgBAgICAkTGB~pm7gmmZw?cd=1&q=rx+550&s=104")
+            .userAgent(userAgent)
+            .get()
+            .html()
+        println(html)
+      }
       configFile <- IO {
         Option(System.getProperty("application.conf"))
       }
@@ -42,15 +53,17 @@ object Main extends IOApp {
             )
             implicit val tgGate: LongPollBot[IO] = new TgGate[IO]()
             for {
-              _ <- migrate[IO](migrations, Some(x => IO { log.info(x) }))
+              _ <- migrate[IO](migrations, Some(x => IO {
+                log.info(x)
+              }))
               _ <- tgGate.start
             } yield ()
         }
     } yield ExitCode.Success
 
   private def resources(
-    config: Config
-  ): Resource[IO, (HikariTransactor[IO], Client[IO], Blocker)] = {
+                         config: Config
+                       ): Resource[IO, (HikariTransactor[IO], Client[IO], Blocker)] = {
     for {
       httpCp <- ExecutionContexts.cachedThreadPool[IO]
       connEc <- ExecutionContexts.fixedThreadPool[IO](10)
@@ -67,11 +80,11 @@ object Main extends IOApp {
     } yield (transactor, httpCl, blocker)
   }
 
-  def transactor[F[_]: Sync: Async: ContextShift](
-    config: DbConfig,
-    ec: ExecutionContext,
-    blocker: Blocker
-  ): Resource[F, HikariTransactor[F]] =
+  def transactor[F[_] : Sync : Async : ContextShift](
+                                                      config: DbConfig,
+                                                      ec: ExecutionContext,
+                                                      blocker: Blocker
+                                                    ): Resource[F, HikariTransactor[F]] =
     HikariTransactor.newHikariTransactor[F](
       config.driver,
       config.url,

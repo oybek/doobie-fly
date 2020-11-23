@@ -9,12 +9,12 @@ import org.jsoup.nodes.Document
 
 class RamItemParseSpec extends ParseSpec {
 
-  val item: Either[String, Item] = Item(
+  val items: Either[String, List[Item]] = List(Item(
     link = "https://avito.ru/ekaterinburg/tovary_dlya_kompyutera/operativnaya_pamyat_8gb_x2_16gb_ddr4_2017375313",
     name = "Оперативная память 8gb x2 16gb ddr4",
     time = LocalDateTime.parse("2020-11-18T10:10:00"),
     cost = 5000
-  ).asRight[String]
+  )).asRight[String]
 
   val itemDocument: Document = Jsoup.parse(
     """
