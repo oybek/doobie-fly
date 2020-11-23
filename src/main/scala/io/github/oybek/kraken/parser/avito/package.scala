@@ -4,12 +4,15 @@ import java.time.LocalDateTime
 
 import cats.implicits.{catsStdInstancesForEither, catsSyntaxEitherId, toTraverseOps}
 import cats.instances.list._
+import org.slf4j.LoggerFactory
 import io.github.oybek.kraken.domain.model.Item
 import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
 
 package object avito {
+
+  private val log = LoggerFactory.getLogger("Parser")
 
   implicit val itemParser: Parser[List[Item]] = {
     case AvitoItem(document) =>
@@ -19,8 +22,8 @@ package object avito {
         divWithDate <- document.findFirst("div[data-marker$=item-date]")
         dateSource = List(divWithDate.attr("data-tooltip").trim, divWithDate.text().trim)
         dateRegex = (s"""(\\d+) (${monthsToNum.keys.mkString("|")}) (\\d+):(\\d+)""").r
-        minutesRegex = (s"""(\\d+) минут. назад""").r
-        hoursRegex = (s"""(\\d+) час. назад""").r
+        minutesRegex = (s"""(\\d+) минут.* назад""").r
+        hoursRegex = (s"""(\\d+) час.* назад""").r
         time <- dateSource.collectFirst {
           case dateRegex(dayOfMonth, month, hh, mm) =>
             LocalDateTime
@@ -35,7 +38,10 @@ package object avito {
             LocalDateTime.now().minusMinutes(minutes.toInt)
           case hoursRegex(hours) =>
             LocalDateTime.now().minusHours(hours.toInt)
-        }.fold(LocalDateTime.now().minusHours(6).asRight[String])(_.asRight[String])
+        }.fold {
+          log.info(s"Can't parse $dateSource")
+          LocalDateTime.now().minusDays(999).asRight[String]
+        }(_.asRight[String])
         spanWithPrice <- document.findFirst("span[data-marker$=item-price]")
         price <- spanWithPrice.findFirst("meta[itemprop$=price]").map(_.attr("content").toInt)
       } yield List(Item(

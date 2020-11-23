@@ -40,7 +40,7 @@ object Main extends IOApp {
           case (transactor, httpClient, blocker) =>
             implicit val tx: HikariTransactor[IO] = transactor
             implicit val client: Client[IO] =
-              Logger(logHeaders = false, logBody = false)(httpClient)
+              Logger(logHeaders = false, logBody = false, logAction = None)(httpClient)
             implicit val tgBotApi: Api[IO] = new BotApi[IO](
               client,
               s"https://api.telegram.org/bot${config.tgBotApiToken}",

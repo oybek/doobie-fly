@@ -29,11 +29,12 @@ class Avito[F[_] : Sync] extends AvitoAlg[F] {
             .delay(log.info(err))
             .as(List.empty[Item])
         case Right(res) =>
-          res.filter(item =>
-            item.time.isAfter(
-              LocalDateTime.now().minusHours(5)
-            )
-          ).pure[F]
+          Sync[F].delay(log.info(s"$res")) >>
+            res.filter(item =>
+              item.time.isAfter(
+                LocalDateTime.now().minusHours(5)
+              )
+            ).pure[F]
       }
     } yield res
 }
