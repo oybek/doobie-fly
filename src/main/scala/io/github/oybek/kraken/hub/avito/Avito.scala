@@ -17,7 +17,7 @@ class Avito[F[_]: Sync] extends AvitoAlg[F] {
     for {
       html <- Sync[F].delay {
         Jsoup
-          .connect("https://www.avito.ru/ekaterinburg/tovary_dlya_kompyutera/komplektuyuschie/videokarty-ASgBAgICAkTGB~pm7gmmZw?cd=1&q=rx+550&s=104")
+          .connect(url)
           .userAgent(userAgent)
           .get()
       }

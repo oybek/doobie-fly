@@ -8,6 +8,6 @@ object Queries {
   val selectScanQ: Query0[Scan] =
     sql"select id, chatid, url from scan".query[Scan]
 
-  def addScanQ(chatId: Int, url: String): Update0 =
+  def addScanQ(chatId: Long, url: String): Update0 =
     sql"insert into scan(chatid, url) values ($chatId, $url)".update
 }

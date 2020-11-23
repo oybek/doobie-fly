@@ -3,15 +3,19 @@ package io.github.oybek.kraken
 import java.util.concurrent.TimeUnit
 
 import cats.effect._
+import cats.effect.concurrent.Ref
 import doobie.ExecutionContexts
 import doobie.hikari.HikariTransactor
 import io.github.oybek.kraken.config.{Config, DbConfig}
+import io.github.oybek.kraken.domain.Core
+import io.github.oybek.kraken.domain.model.Item
+import io.github.oybek.kraken.hub.avito.Avito
+import io.github.oybek.kraken.hub.db.DbAccess
 import io.github.oybek.kraken.hub.telegram.TgGate
 import io.github.oybek.kraken.migration.migrate
 import org.http4s.client.Client
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger
-import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 import telegramium.bots.high.{Api, BotApi, LongPollBot}
 
@@ -30,6 +34,7 @@ object Main extends IOApp {
       _ <- IO {
         log.info(s"loaded config: $config")
       }
+      cacheRef <- Ref.of[IO, Map[String, List[Item]]](Map.empty[String, List[Item]])
       _ <- resources(config)
         .use {
           case (transactor, httpClient, blocker) =>
@@ -41,11 +46,15 @@ object Main extends IOApp {
               s"https://api.telegram.org/bot${config.tgBotApiToken}",
               blocker
             )
+            implicit val dbAccess: DbAccess[IO] = new DbAccess[IO]
             implicit val tgGate: LongPollBot[IO] = new TgGate[IO]()
+            implicit val avito: Avito[IO] = new Avito[IO]
+            implicit val core: Core[IO] = new Core[IO](cacheRef)
             for {
               _ <- migrate[IO](migrations, Some(x => IO {
                 log.info(x)
               }))
+              _ <- core.start.start.void
               _ <- tgGate.start
             } yield ()
         }
