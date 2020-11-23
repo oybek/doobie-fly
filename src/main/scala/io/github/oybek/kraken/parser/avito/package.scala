@@ -17,8 +17,10 @@ package object avito {
         aWithLink <- document.findFirst("a[data-marker$=item-title]")
         titleSpan <- aWithLink.findFirst("span")
         divWithDate <- document.findFirst("div[data-marker$=item-date]")
-        dateSource = List(divWithDate.attr("data-tooltip"), divWithDate.text())
+        dateSource = List(divWithDate.attr("data-tooltip").trim, divWithDate.text().trim)
         dateRegex = (s"""(\\d+) (${monthsToNum.keys.mkString("|")}) (\\d+):(\\d+)""").r
+        minutesRegex = (s"""(\\d+) минут. назад""").r
+        hoursRegex = (s"""(\\d+) час. назад""").r
         time <- dateSource.collectFirst {
           case dateRegex(dayOfMonth, month, hh, mm) =>
             LocalDateTime
@@ -29,7 +31,11 @@ package object avito {
               .withMinute(mm.toInt)
               .withSecond(0)
               .withNano(0)
-        }.fold(s"Can't parse date from $dateSource".asLeft[LocalDateTime])(_.asRight[String])
+          case minutesRegex(minutes) =>
+            LocalDateTime.now().minusMinutes(minutes.toInt)
+          case hoursRegex(hours) =>
+            LocalDateTime.now().minusHours(hours.toInt)
+        }.fold(LocalDateTime.now().minusHours(6).asRight[String])(_.asRight[String])
         spanWithPrice <- document.findFirst("span[data-marker$=item-price]")
         price <- spanWithPrice.findFirst("meta[itemprop$=price]").map(_.attr("content").toInt)
       } yield List(Item(

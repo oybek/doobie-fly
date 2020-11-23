@@ -44,20 +44,26 @@ class Core[F[_]: Sync: Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
           Methods
             .sendMessage(chatId = ChatIntId(scan.chatId), text = s"""
                 |Новое объявление
-                |${item.link}
+                |Название: ${item.name}
+                |Цена: ${item.cost}
+                |Дата: ${item.time}
+                |Ссылка: ${item.link}
                 |""".stripMargin)
             .exec
             .void
-        case ItemChanged(_, item) =>
+        case ItemChanged(prev, item) =>
           Methods
             .sendMessage(chatId = ChatIntId(scan.chatId), text = s"""
                 |Объявление обновилось
-                |${item.link}
+                |Название: ${prev.name} -> ${item.name}
+                |Цена: ${prev.cost} -> ${item.cost}
+                |Дата: ${item.time}
+                |Ссылка: ${item.link}
                 |""".stripMargin)
             .exec
             .void
         case ItemDeleted(_) => ().pure[F]
       }
-      _ <- cacheRef.update(cache => cache.updated(scan.url, newItems))
+      _ <- cacheRef.update(cache => cache.updated(scan.url, (items ++ newItems).distinctBy(_.link)))
     } yield ()
 }
