@@ -23,16 +23,6 @@ object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] =
     for {
-      _ <- IO {
-        val userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.122 Safari/534.30"
-        val html =
-          Jsoup
-            .connect("https://www.avito.ru/ekaterinburg/tovary_dlya_kompyutera/komplektuyuschie/videokarty-ASgBAgICAkTGB~pm7gmmZw?cd=1&q=rx+550&s=104")
-            .userAgent(userAgent)
-            .get()
-            .html()
-        println(html)
-      }
       configFile <- IO {
         Option(System.getProperty("application.conf"))
       }
