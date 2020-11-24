@@ -26,7 +26,7 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
   private val log = LoggerFactory.getLogger("Core")
 
   def start: F[Unit] =
-    (Stream.emit(()) ++ Stream.fixedRate[F](2.minutes))
+    (Stream.emit(()) ++ Stream.fixedRate[F](1.minute))
       .evalTap { _ =>
         for {
           _ <- Sync[F].delay(log.info("Waking up..."))
@@ -83,7 +83,7 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
             .void
         case ItemDeleted(_) => ().pure[F]
       }
-      _ <- cacheRef.update(cache => cache.updated(scan.url, (items ++ newItems).distinctBy(_.link)))
+      _ <- cacheRef.update(cache => cache.updated(scan.url, (newItems ++ items).distinctBy(_.link)))
     } yield ()
 
   implicit class LocalDateTimeOps(localDateTime: LocalDateTime) {

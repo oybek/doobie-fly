@@ -14,11 +14,15 @@ class TgGate[F[_] : Async : Timer : Concurrent](implicit bot: Api[F], dbAccess: 
     with TgExtractors {
 
   val log: Logger = LoggerFactory.getLogger("TgGate")
+  val me: Long = 108683062
 
   override def onMessage(message: Message): F[Unit] =
     Sync[F].delay {
       log.info(s"got message: $message")
     } >> (message match {
+      case _ if message.chat.id != me =>
+        send(message.chat.id, "Пошёл нахуй!")
+
       case Text(text) if text.startsWith("https://") =>
         for {
           res <- dbAccess.addScan(Scan(chatId = message.chat.id, url = text.trim))
