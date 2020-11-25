@@ -6,7 +6,7 @@ package object parser {
 
   object syntax {
     implicit class DocumentOps(val document: AvitoElement) extends AnyVal {
-      def as[T](implicit parser: Parser[T]): Either[String, T] =
+      def as[T](implicit parser: Parser[T]): Either[Throwable, T] =
         parser.parse(document)
     }
   }

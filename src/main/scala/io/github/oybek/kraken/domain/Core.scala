@@ -43,12 +43,22 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
         } yield ()
       }.compile.drain
 
+  val me: Long = 108683062
+
   def handleScan(scan: Scan): F[Unit] =
     for {
       _ <- Sync[F].delay(log.info(s"Handling $scan..."))
       cache <- cacheRef.get
       items = cache.getOrElse(scan.url, List.empty[Item])
-      newItems <- avito.findItems(scan.url)
+      newItems <- avito.findItems(scan.url).value.flatMap {
+        case Left(err) =>
+          Sync[F].delay(err.printStackTrace()) >>
+            send(me, err.getMessage + err.toString).as(List.empty[Item])
+        case Right(newItems) =>
+          Sync[F].delay(log.info(s"fetched: $newItems, filtering...")).as(
+            newItems
+          )
+      }
       events = diff(items, newItems)
       _ <- events.traverse_ {
         case ItemCreated(item) =>
@@ -94,4 +104,13 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
       s"${if (hours > 0) s"$hours часов" else ""} $minutes минут назад"
     }
   }
+
+  def send(chatId: Long, text: String): F[Unit] =
+    Methods
+      .sendMessage(chatId = ChatIntId(chatId), text = text)
+      .exec
+      .void >>
+      Sync[F].delay {
+        log.info(s"send message: $text to $chatId")
+      }
 }

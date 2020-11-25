@@ -40,8 +40,8 @@ package object avito {
             LocalDateTime.now().minusHours(hours.toInt)
         }.fold {
           log.info(s"Can't parse $dateSource")
-          LocalDateTime.now().minusDays(999).asRight[String]
-        }(_.asRight[String])
+          LocalDateTime.now().minusDays(999).asRight[Throwable]
+        }(_.asRight[Throwable])
         spanWithPrice <- document.findFirst("span[data-marker$=item-price]")
         price <- spanWithPrice.findFirst("meta[itemprop$=price]").map(_.attr("content").toInt)
       } yield List(Item(
@@ -55,7 +55,7 @@ package object avito {
         rawItems <- document.select("div[data-marker$=item]")
           .asScala
           .toList
-          .asRight[String]
+          .asRight[Throwable]
         res <- rawItems.map(AvitoItem).flatTraverse(itemParser.parse)
       } yield res
     case AvitoPage(document) =>
@@ -81,8 +81,8 @@ package object avito {
   )
 
   implicit class ElementOps(val element: Element) extends AnyVal {
-    def findFirst(template: String): Either[String, Element] =
-      Option(element.selectFirst(template)).fold(s"Not found: $template".asLeft[Element])(_.asRight[String])
+    def findFirst(template: String): Either[Throwable, Element] =
+      Option(element.selectFirst(template)).fold(new Throwable(s"Not found: $template").asLeft[Element])(_.asRight[Throwable])
   }
 
 }
