@@ -2,9 +2,9 @@ package io.github.oybek.kraken.hub.telegram
 
 import cats.effect.{Async, Concurrent, Sync, Timer}
 import cats.implicits._
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import io.github.oybek.kraken.domain.model.Scan
 import io.github.oybek.kraken.hub.db.DbAccess
-import org.slf4j.{Logger, LoggerFactory}
 import telegramium.bots.high.implicits._
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 import telegramium.bots.{ChatIntId, Message}
@@ -13,13 +13,11 @@ class TgGate[F[_] : Async : Timer : Concurrent](implicit bot: Api[F], dbAccess: 
   extends LongPollBot[F](bot)
     with TgExtractors {
 
-  val log: Logger = LoggerFactory.getLogger("TgGate")
+  private val log = Slf4jLogger.getLoggerFromName[F]("Core")
   val me: Long = 108683062
 
   override def onMessage(message: Message): F[Unit] =
-    Sync[F].delay {
-      log.info(s"got message: $message")
-    } >> (message match {
+    log.info(s"got message: $message") >> (message match {
       case _ if message.chat.id != me =>
         send(message.chat.id, "Пошёл нахуй!")
 
@@ -39,8 +37,5 @@ class TgGate[F[_] : Async : Timer : Concurrent](implicit bot: Api[F], dbAccess: 
     Methods
       .sendMessage(chatId = ChatIntId(chatId), text = text)
       .exec
-      .void >>
-      Sync[F].delay {
-        log.info(s"send message: $text to $chatId")
-      }
+      .void >> log.info(s"send message: $text to $chatId")
 }

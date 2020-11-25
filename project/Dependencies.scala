@@ -16,6 +16,7 @@ object Dependencies {
     val http4s = "0.21.7"
     val telegramium = "2.49.0"
     val fs2 = "2.4.4"
+    val log4cats = "1.1.1"
   }
 
   val catsCore = "org.typelevel" %% "cats-core" % V.catsCore
@@ -61,11 +62,17 @@ object Dependencies {
     "org.http4s" %% "http4s-blaze-client" % V.http4s
   )
 
+  val log4cats = Seq(
+    "io.chrisdavenport" %% "log4cats-core"    % V.log4cats,
+    "io.chrisdavenport" %% "log4cats-slf4j"   % V.log4cats
+  )
+
   val common = Seq(catsCore, catsEffect, scalaTest, jsoup, pureConfig, fs2) ++
     logger ++
     doobie ++
     mock ++
     http4s ++
     telegramium ++
-    testContainers
+    testContainers ++
+    log4cats
 }

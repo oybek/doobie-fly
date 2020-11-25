@@ -3,17 +3,17 @@ package io.github.oybek.kraken.domain
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-import fs2.Stream
-import cats.implicits._
-import cats.effect.{Sync, Timer}
 import cats.effect.concurrent.Ref
+import cats.effect.{Sync, Timer}
+import cats.implicits._
+import fs2.Stream
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import io.github.oybek.kraken.domain.model._
 import io.github.oybek.kraken.hub.avito.AvitoAlg
 import io.github.oybek.kraken.hub.db.DbAccessAlg
-import org.slf4j.LoggerFactory
-import telegramium.bots.{ChatIntId, InlineKeyboardButton, InlineKeyboardMarkup}
-import telegramium.bots.high.{Api, Methods}
 import telegramium.bots.high.implicits._
+import telegramium.bots.high.{Api, Methods}
+import telegramium.bots.{ChatIntId, InlineKeyboardButton, InlineKeyboardMarkup}
 
 import scala.concurrent.duration._
 
@@ -22,21 +22,20 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
   bot: Api[F],
   dbAccess: DbAccessAlg[F]
 ) {
-
-  private val log = LoggerFactory.getLogger("Core")
+  private val log = Slf4jLogger.getLoggerFromName[F]("Core")
 
   def start: F[Unit] =
     (Stream.emit(()) ++ Stream.fixedRate[F](1.minute))
       .evalTap { _ =>
         for {
-          _ <- Sync[F].delay(log.info("Waking up..."))
-          _ <- Sync[F].delay(log.info("Fetching scans..."))
+          _ <- log.info("Waking up...")
+          _ <- log.info("Fetching scans...")
           scans <- dbAccess.getScans
-          _ <- Sync[F].delay(log.info(s"Fetched $scans"))
+          _ <- log.info(s"Fetched $scans")
           res <- scans.traverse_(handleScan).attempt
           _ <- res match {
             case Left(msg) =>
-              Sync[F].delay(log.info(msg.getMessage))
+              log.info(msg.getMessage)
             case Right(_) =>
               ().pure[F]
           }
@@ -47,7 +46,7 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
 
   def handleScan(scan: Scan): F[Unit] =
     for {
-      _ <- Sync[F].delay(log.info(s"Handling $scan..."))
+      _ <- log.info(s"Handling $scan...")
       cache <- cacheRef.get
       items = cache.getOrElse(scan.url, List.empty[Item])
       newItems <- avito.findItems(scan.url).value.flatMap {
@@ -55,9 +54,9 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
           Sync[F].delay(err.printStackTrace()) >>
             send(me, err.getMessage + err.toString).as(List.empty[Item])
         case Right(newItems) =>
-          Sync[F].delay(log.info(s"fetched: $newItems, filtering...")).as(
-            newItems
-          )
+          log.info(s"fetched: $newItems, filtering...") >> newItems.filter(item =>
+            item.time.isAfter(LocalDateTime.now().minusHours(5))
+          ).pure[F]
       }
       events = diff(items, newItems)
       _ <- events.traverse_ {
@@ -109,8 +108,5 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
     Methods
       .sendMessage(chatId = ChatIntId(chatId), text = text)
       .exec
-      .void >>
-      Sync[F].delay {
-        log.info(s"send message: $text to $chatId")
-      }
+      .void >> log.info(s"send message: $text to $chatId")
 }

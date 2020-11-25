@@ -6,6 +6,7 @@ import cats.effect._
 import cats.effect.concurrent.Ref
 import doobie.ExecutionContexts
 import doobie.hikari.HikariTransactor
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import io.github.oybek.kraken.config.{Config, DbConfig}
 import io.github.oybek.kraken.domain.Core
 import io.github.oybek.kraken.domain.model.Item
@@ -16,14 +17,13 @@ import io.github.oybek.kraken.migration.migrate
 import org.http4s.client.Client
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger
-import org.slf4j.LoggerFactory
 import telegramium.bots.high.{Api, BotApi, LongPollBot}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 object Main extends IOApp {
-  private val log = LoggerFactory.getLogger("Main")
+  private val log = Slf4jLogger.getLoggerFromName[IO]("Main")
 
   override def run(args: List[String]): IO[ExitCode] =
     for {
@@ -31,9 +31,7 @@ object Main extends IOApp {
         Option(System.getProperty("application.conf"))
       }
       config <- Config.load[IO](configFile)
-      _ <- IO {
-        log.info(s"loaded config: $config")
-      }
+      _ <- log.info(s"loaded config: $config")
       cacheRef <- Ref.of[IO, Map[String, List[Item]]](Map.empty[String, List[Item]])
       _ <- resources(config)
         .use {
@@ -51,9 +49,7 @@ object Main extends IOApp {
             implicit val avito: Avito[IO] = new Avito[IO]
             implicit val core: Core[IO] = new Core[IO](cacheRef)
             for {
-              _ <- migrate[IO](migrations, Some(x => IO {
-                log.info(x)
-              }))
+              _ <- migrate[IO](migrations, Some(x => log.info(x)))
               _ <- core.start.start.void
               _ <- tgGate.start
             } yield ()
@@ -79,11 +75,9 @@ object Main extends IOApp {
     } yield (transactor, httpCl, blocker)
   }
 
-  def transactor[F[_] : Sync : Async : ContextShift](
-                                                      config: DbConfig,
-                                                      ec: ExecutionContext,
-                                                      blocker: Blocker
-                                                    ): Resource[F, HikariTransactor[F]] =
+  def transactor[F[_] : Async : ContextShift](config: DbConfig,
+                                              ec: ExecutionContext,
+                                              blocker: Blocker): Resource[F, HikariTransactor[F]] =
     HikariTransactor.newHikariTransactor[F](
       config.driver,
       config.url,
