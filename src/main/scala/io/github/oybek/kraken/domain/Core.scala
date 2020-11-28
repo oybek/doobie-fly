@@ -1,5 +1,6 @@
 package io.github.oybek.kraken.domain
 
+import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
@@ -17,7 +18,7 @@ import telegramium.bots.{ChatIntId, InlineKeyboardButton, InlineKeyboardMarkup}
 
 import scala.concurrent.duration._
 
-class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
+class Core[F[_] : Sync : Timer](
   implicit avito: AvitoAlg[F],
   bot: Api[F],
   dbAccess: DbAccessAlg[F]
@@ -25,7 +26,7 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
   private val log = Slf4jLogger.getLoggerFromName[F]("Core")
 
   def start: F[Unit] =
-    (Stream.emit(()) ++ Stream.fixedRate[F](1.minute))
+    (Stream.emit(()) ++ Stream.fixedRate[F](2.minutes))
       .evalTap { _ =>
         for {
           _ <- log.info("Waking up...")
@@ -47,15 +48,14 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
   def handleScan(scan: Scan): F[Unit] =
     for {
       _ <- log.info(s"Handling $scan...")
-      cache <- cacheRef.get
-      items = cache.getOrElse(scan.url, List.empty[Item])
+      items <- dbAccess.selectItems(scan.id)
       newItems <- avito.findItems(scan.url).value.flatMap {
         case Left(err) =>
           Sync[F].delay(err.printStackTrace()) >>
             send(me, err.getMessage + err.toString).as(List.empty[Item])
         case Right(newItems) =>
           log.info(s"fetched: $newItems, filtering...") >> newItems.filter(item =>
-            item.time.isAfter(LocalDateTime.now().minusHours(5))
+            item.time.toLocalDateTime.isAfter(LocalDateTime.now().minusHours(5))
           ).pure[F]
       }
       events = diff(items, newItems)
@@ -92,12 +92,12 @@ class Core[F[_] : Sync : Timer](cacheRef: Ref[F, Map[String, List[Item]]])(
             .void
         case ItemDeleted(_) => ().pure[F]
       }
-      _ <- cacheRef.update(cache => cache.updated(scan.url, (newItems ++ items).distinctBy(_.link)))
+      _ <- dbAccess.upsertItems(scan.id, newItems)
     } yield ()
 
-  implicit class LocalDateTimeOps(localDateTime: LocalDateTime) {
+  implicit class LocalDateTimeOps(timestamp: Timestamp) {
     def readable: String = {
-      val diffMinutes = ChronoUnit.MINUTES.between(localDateTime, LocalDateTime.now())
+      val diffMinutes = ChronoUnit.MINUTES.between(timestamp.toLocalDateTime, LocalDateTime.now())
       val hours = diffMinutes / 60
       val minutes = diffMinutes % 60
       s"${if (hours > 0) s"$hours часов" else ""} $minutes минут назад"

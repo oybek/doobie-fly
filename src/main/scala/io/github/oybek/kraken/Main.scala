@@ -32,7 +32,6 @@ object Main extends IOApp {
       }
       config <- Config.load[IO](configFile)
       _ <- log.info(s"loaded config: $config")
-      cacheRef <- Ref.of[IO, Map[String, List[Item]]](Map.empty[String, List[Item]])
       _ <- resources(config)
         .use {
           case (transactor, httpClient, blocker) =>
@@ -47,7 +46,7 @@ object Main extends IOApp {
             implicit val dbAccess: DbAccess[IO] = new DbAccess[IO]
             implicit val tgGate: LongPollBot[IO] = new TgGate[IO]()
             implicit val avito: Avito[IO] = new Avito[IO]
-            implicit val core: Core[IO] = new Core[IO](cacheRef)
+            implicit val core: Core[IO] = new Core[IO]
             for {
               _ <- migrate[IO](migrations, Some(x => log.info(x)))
               _ <- core.start.start.void

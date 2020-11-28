@@ -1,5 +1,6 @@
 package io.github.oybek.kraken.parser.avito
 
+import java.sql.Timestamp
 import java.time.LocalDateTime
 
 import cats.implicits.catsSyntaxEitherId
@@ -12,7 +13,7 @@ class CpuItemParseSpec extends ParseSpec {
   val items: Either[String, List[Item]] = List(Item(
     link = "https://avito.ru/ekaterinburg/tovary_dlya_kompyutera/ryzen_5_2600_am4_2040986151",
     name = "Ryzen 5 2600 ; am4",
-    time = LocalDateTime.parse("2020-11-17T18:20:00"),
+    time = Timestamp.valueOf(LocalDateTime.parse("2020-11-17T18:20:00")),
     cost = 9000
   )).asRight[String]
 

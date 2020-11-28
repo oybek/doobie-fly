@@ -1,8 +1,9 @@
 package io.github.oybek.kraken.domain.model
 
-import java.time.LocalDateTime
+import java.sql.Timestamp
 
 case class Item(link: String,
                 name: String,
-                time: LocalDateTime,
+                time: Timestamp,
                 cost: Int)
+

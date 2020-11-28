@@ -1,5 +1,6 @@
 package io.github.oybek.kraken.parser
 
+import java.sql.Timestamp
 import java.time.LocalDateTime
 
 import cats.implicits.{catsStdInstancesForEither, catsSyntaxEitherId, toTraverseOps}
@@ -47,7 +48,7 @@ package object avito {
       } yield List(Item(
         link = "https://avito.ru" + aWithLink.attr("href"),
         name = titleSpan.text(),
-        time = time,
+        time = Timestamp.valueOf(time),
         cost = price
       ))
     case AvitoItemList(document) =>
@@ -56,12 +57,14 @@ package object avito {
           .asScala
           .toList
           .asRight[Throwable]
+        _ = println(rawItems.length)
         res <- rawItems.map(AvitoItem).flatTraverse(itemParser.parse)
       } yield res
     case AvitoPage(document) =>
       for {
-        itemList <- document.findFirst("div[data-marker$=catalog-serp]")
-        res <- itemParser.parse(AvitoItemList(itemList))
+        blocks <- document.select("div[class^=items-items]")
+          .asScala.toList.asRight[Throwable]
+        res <- blocks.flatTraverse(x => itemParser.parse(AvitoItemList(x)))
       } yield res
   }
 
